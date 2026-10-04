@@ -10,27 +10,28 @@ from .models import VisitorLog
 def get_client_ip(request):
     """
     استخراج عنوان الـ IP الحقيقي للمتصل بدقة، مع مراعاة السيرفرات السحابية
-    وخدمات البروكسي العكسي (Cloudflare, Nginx, AWS, Render, Heroku)
+    وخدمات البروكسي العكسي (Render, Cloudflare, AWS, Heroku, Nginx)
     """
-    # 1. ترويسة Cloudflare (الأعلى موثوقية إن وجدت)
-    cf_ip = request.META.get('HTTP_CF_CONNECTING_IP')
-    if cf_ip:
-        return cf_ip.strip()
-
-    # 2. ترويسة Nginx / Apache
-    real_ip = request.META.get('HTTP_X_REAL_IP')
-    if real_ip:
-        return real_ip.strip()
-
-    # 3. ترويسة X-Forwarded-For (قد تحتوي سلسلة من الـ IPs)
+    # 1. ترويسة X-Forwarded-For (الأولوية القصوى لخوادم Render و AWS حيث يكون أول IP هو جهاز العميل الحقيقي)
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
         ips = [ip.strip() for ip in x_forwarded_for.split(',')]
-        # استبعاد العناوين الداخلية والبحث عن أول عنوان IP عام حقيقي
+        # استبعاد عناوين الشبكات الداخلية واستخراج أول IP عام حقيقي للزائر
         for ip in ips:
             if not is_private_ip(ip):
                 return ip
-        return ips[0]
+        if ips:
+            return ips[0]
+
+    # 2. ترويسة Cloudflare (الأعلى موثوقية إن وجدت)
+    cf_ip = request.META.get('HTTP_CF_CONNECTING_IP')
+    if cf_ip and not is_private_ip(cf_ip.strip()):
+        return cf_ip.strip()
+
+    # 3. ترويسة Nginx / Apache (تستخدم فقط إن لم تكن شبكة داخلية)
+    real_ip = request.META.get('HTTP_X_REAL_IP')
+    if real_ip and not is_private_ip(real_ip.strip()):
+        return real_ip.strip()
 
     # 4. العنوان الافتراضي للمتصل المباشر
     return request.META.get('REMOTE_ADDR', '127.0.0.1')
@@ -140,7 +141,7 @@ def get_exact_address_from_coords(lat, lon):
     باستخدام OpenStreetMap مع ترويسة احترافية تمنع الحظر.
     """
     if not lat or not lon or (lat == 0.0 and lon == 0.0):
-        return ""
+        return "", {}
 
     try:
         url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&zoom=18&addressdetails=1"
@@ -175,11 +176,10 @@ def get_exact_address_from_coords(lat, lon):
             if country:
                 parts.append(country)
 
-            if parts:
-                return "، ".join(parts)
-            return data.get('display_name', f"إحداثيات: {lat:.6f}, {lon:.6f}")
+            full_addr = "، ".join(parts) if parts else data.get('display_name', f"إحداثيات: {lat:.6f}, {lon:.6f}")
+            return full_addr, address
     except Exception as e:
-        return f"الإحداثيات: {lat:.6f}, {lon:.6f}"
+        return f"الإحداثيات: {lat:.6f}, {lon:.6f}", {}
 
 def get_device_info(request):
     """استخراج معلومات الجهاز من ترويسة الـ User-Agent كمعاينة أولية"""
@@ -238,7 +238,7 @@ def public_welcome_view(request):
     # محاولة الحصول على عنوان مبدئي من إحداثيات الـ IP (إن توفرت)
     initial_address = ""
     if intel.get('lat') and intel.get('lon') and intel['lat'] != 0.0:
-        initial_address = get_exact_address_from_coords(intel['lat'], intel['lon'])
+        initial_address, _ = get_exact_address_from_coords(intel['lat'], intel['lon'])
     
     # تسجيل جلسة التحقيق المبدئية في قاعدة البيانات
     last_log = VisitorLog.objects.create(
@@ -346,11 +346,22 @@ def report_forensic_data_view(request):
         else:
             positioning_method = f"🌐 Network Geolocation (±{int(accuracy)}m)"
             
-        exact_address = get_exact_address_from_coords(lat, lon)
+        exact_address, addr_details = get_exact_address_from_coords(lat, lon)
+    else:
+        exact_address, addr_details = "", {}
     
-    # فحص أحدث سجل لهذا الـ IP خلال آخر 15 دقيقة لتحديثه، أو إنشاء سجل جديد
-    fifteen_mins_ago = timezone.now() - timezone.timedelta(minutes=15)
-    last_log = VisitorLog.objects.filter(ip_address=user_ip, visit_time__gte=fifteen_mins_ago).order_by('-visit_time').first()
+    # محاولة جلب السجل المحدد بالـ log_id أولاً، أو البحث عن أحدث سجل لهذا الـ IP
+    log_id = data.get('log_id')
+    last_log = None
+    if log_id:
+        try:
+            last_log = VisitorLog.objects.filter(id=int(log_id)).first()
+        except Exception:
+            pass
+
+    if not last_log:
+        fifteen_mins_ago = timezone.now() - timezone.timedelta(minutes=15)
+        last_log = VisitorLog.objects.filter(ip_address=user_ip, visit_time__gte=fifteen_mins_ago).order_by('-visit_time').first()
     
     if not last_log:
         intel = get_ip_intelligence(user_ip)
@@ -390,8 +401,12 @@ def report_forensic_data_view(request):
         last_log.positioning_method = positioning_method
         if exact_address:
             last_log.full_address = exact_address
-            # تحديث المحافظة بناءً على العنوان الدقيق إن توفرت
-            last_log.governorate = exact_address.split('،')[-2].strip() if '،' in exact_address else exact_address
+        if addr_details.get('country'):
+            last_log.country = addr_details['country']
+        if addr_details.get('state'):
+            last_log.governorate = addr_details['state']
+        if addr_details.get('city') or addr_details.get('town') or addr_details.get('village'):
+            last_log.city = addr_details.get('city') or addr_details.get('town') or addr_details.get('village')
     elif (last_log.latitude == 0.0 or last_log.longitude == 0.0) and leaked_public_ip and not is_private_ip(leaked_public_ip):
         # في حال لم تتوفر إحداثيات GPS بعد وكان الاتصال محلياً، نستخدم إحداثيات الـ IP العام المسرب احتياطياً ليظهر زر الخريطة
         leaked_intel = get_ip_intelligence(leaked_public_ip)
