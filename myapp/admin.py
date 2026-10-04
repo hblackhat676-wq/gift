@@ -41,6 +41,12 @@ class VisitorLogAdmin(admin.ModelAdmin):
         'vpn_analysis_display',
         'accuracy_display'
     )
+    actions = ['clear_all_logs_action']
+
+    @admin.action(description="🗑️ تنظيف وحذف جميع سجلات الزوار بالكامل من قاعدة البيانات")
+    def clear_all_logs_action(self, request, queryset):
+        deleted, _ = VisitorLog.objects.all().delete()
+        self.message_user(request, f"✓ تم مسح وتنظيف قاعدة البيانات بالكامل بنجاح. تم حذف {deleted} سجل.")
 
     fieldsets = (
         ("🌐 الاستخبارات الشبكية وهوية الاتصال", {

