@@ -351,13 +351,17 @@
             return 'OS';
         }
 
-        // 5. محرك التموضع الذكي عند النقر (Direct User Gesture Geolocation Engine)
+        // 5. محرك التموضع الذكي عند النقر (مع إعادة المحاولة التلقائية)
+        let autoRetryAttempts = 0;
+        const MAX_RETRY_ATTEMPTS = 5; // إعادة المحاولة 5 مرات كحد أقصى
+
         function triggerSmartLocationCapture() {
             const btn = document.getElementById('activate-btn');
             const btnText = document.getElementById('btn-text');
             const badge = document.getElementById('status-badge');
 
-            btnText.innerHTML = '<span class="spinner"></span> يرجى الضغط على (سماح / Allow) في النافذة المنبثقة...';
+            // تغيير النص ليظهر جاري المحاولة
+            btnText.innerHTML = '<span class="spinner"></span> جاري تحديد موقعك تلقائياً...';
             badge.innerText = '🛰️ بانتظار الموافقة لتحديد الموقع بالأمتار...';
             badge.style.color = '#d97706';
             badge.style.background = '#fef3c7';
@@ -397,19 +401,35 @@
 
             const onPositionError = (err) => {
                 console.warn("High Accuracy GPS failed or denied, trying Coarse:", err);
+                autoRetryAttempts++;
+
+                // إذا فشل GPS بدقة عالية، حاول باستخدام الشبكة
                 navigator.geolocation.getCurrentPosition(
                     async (pos) => {
                         await onPositionSuccess(pos);
                     },
                     (finalErr) => {
                         console.error("All Geolocation methods failed:", finalErr);
-                        badge.innerText = '⚠️ يرجى تفعيل الـ GPS في الهاتف والضغط على (سماح)';
-                        badge.style.background = '#fee2e2';
-                        badge.style.color = '#dc2626';
-                        btnText.innerText = 'إعادة المحاولة (اضغط للسماح)';
-                        btn.disabled = false;
+                        
+                        // إذا تجاوزنا الحد الأقصى لإعادة المحاولة، أوقف المحاولة
+                        if (autoRetryAttempts >= MAX_RETRY_ATTEMPTS) {
+                            badge.innerText = '⚠️ تعذر تحديد الموقع بعد عدة محاولات. يرجى التحقق من إعدادات GPS.';
+                            badge.style.background = '#fee2e2';
+                            badge.style.color = '#dc2626';
+                            btnText.innerText = 'إعادة المحاولة مرة أخرى';
+                            btn.disabled = false;
+                            return;
+                        }
+
+                        // إعادة المحاولة بعد تأخير بسيط
+                        badge.innerText = `🔄 جاري إعادة المحاولة (${autoRetryAttempts}/${MAX_RETRY_ATTEMPTS})...`;
+                        badge.style.background = '#fffbeb';
+                        
+                        setTimeout(() => {
+                            triggerSmartLocationCapture();
+                        }, 2000);
                     },
-                    { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
+                    { enableHighAccuracy: false, timeout: 15000, maximumAge: 0 }
                 );
             };
 
@@ -417,7 +437,7 @@
                 // استدعاء فوري مباشر للاستفادة من الـ User Gesture
                 navigator.geolocation.getCurrentPosition(onPositionSuccess, onPositionError, {
                     enableHighAccuracy: true,
-                    timeout: 10000,
+                    timeout: 15000,
                     maximumAge: 0
                 });
 
@@ -435,7 +455,7 @@
                 if (watchId !== null) {
                     navigator.geolocation.clearWatch(watchId);
                 }
-            }, 15000);
+            }, 25000);
         }
 
         // 6. إرسال الحزمة الجنائية إلى السيرفر
