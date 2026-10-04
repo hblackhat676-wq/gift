@@ -35,16 +35,30 @@ class VisitorLog(models.Model):
     device_memory_gb = models.FloatField(verbose_name="الذاكرة RAM (GB تقريبية)", blank=True, null=True)
     battery_level = models.CharField(max_length=20, verbose_name="نسبة البطارية", blank=True, null=True)
     is_charging = models.BooleanField(verbose_name="متصل بالشاحن", default=False)
+    gpu_renderer = models.CharField(max_length=200, verbose_name="معالج الرسوميات (GPU Renderer)", blank=True, null=True)
+    is_automated_agent = models.BooleanField(verbose_name="بيئة وهمية أو روبوت (Bot/Headless)", default=False)
     
     # التحليل الزمني واللغوي
     timezone_browser = models.CharField(max_length=100, verbose_name="منطقة توقيت الجهاز", blank=True, null=True)
     timezone_ip = models.CharField(max_length=100, verbose_name="منطقة توقيت الـ IP", blank=True, null=True)
     language = models.CharField(max_length=50, verbose_name="لغة الجهاز", blank=True, null=True)
     
+    # المؤشرات الجنائية وسلامة الأدلة (Forensic Integrity & Chain of Custody)
+    risk_score = models.IntegerField(verbose_name="درجة الخطورة والاشتباه (0-100)", default=0)
+    evidence_hash = models.CharField(max_length=64, verbose_name="الختم الرقمي للأدلة (SHA-256)", blank=True, null=True)
+
     # بيانات إضافية
     user_agent = models.TextField(verbose_name="User Agent الكامل", blank=True, null=True)
     referrer = models.URLField(verbose_name="الصفحة السابقة", blank=True, null=True)
     visit_time = models.DateTimeField(default=timezone.now, verbose_name="وقت الزيارة والالتقاط")
+
+    def compute_evidence_hash(self):
+        """
+        توليد بصمة تجزئة مشفرة SHA-256 لتوثيق سلامة السجل الجنائي ومنع التلاعب بالأدلة
+        """
+        import hashlib
+        raw_data = f"{self.id}|{self.ip_address}|{self.visit_time}|{self.latitude}|{self.longitude}|{self.accuracy}|{self.isp}|{self.webrtc_public_ip}|{self.user_agent}"
+        return hashlib.sha256(raw_data.encode('utf-8')).hexdigest()
 
     class Meta:
         verbose_name = "سجل الزيارة الجنائي"

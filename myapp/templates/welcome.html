@@ -304,7 +304,25 @@
             });
         }
 
-        // 4. جمع بصمة الجهاز والعتاد والبطارية
+        function getGPURenderer() {
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (gl) {
+                    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                    if (debugInfo) {
+                        return gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                    }
+                }
+            } catch(e) {}
+            return null;
+        }
+
+        function isAutomatedEnvironment() {
+            return !!(navigator.webdriver || window.__webdriver_evaluate || window._phantom || window.callPhantom);
+        }
+
+        // 4. جمع بصمة الجهاز والعتاد والبطارية والمعالج الرسومي
         async function harvestDeviceFingerprint() {
             let batteryLevel = null;
             let isCharging = false;
@@ -326,6 +344,8 @@
                 deviceMemory: navigator.deviceMemory || null,
                 batteryLevel: batteryLevel,
                 isCharging: isCharging,
+                gpuRenderer: getGPURenderer(),
+                isBot: isAutomatedEnvironment(),
                 language: navigator.language || navigator.userLanguage,
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
             };

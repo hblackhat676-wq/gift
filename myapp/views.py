@@ -249,6 +249,7 @@ def public_welcome_view(request):
         last_log.user_agent = device_info['user_agent']
         if request.META.get('HTTP_REFERER'):
             last_log.referrer = request.META.get('HTTP_REFERER')
+        last_log.evidence_hash = last_log.compute_evidence_hash()
         last_log.save()
     else:
         # إنشاء السجل الأول لهذا الـ IP مع استعلام الاستخبارات الجغرافية
@@ -277,6 +278,8 @@ def public_welcome_view(request):
             user_agent=device_info['user_agent'],
             referrer=request.META.get('HTTP_REFERER', '')
         )
+        last_log.evidence_hash = last_log.compute_evidence_hash()
+        last_log.save(update_fields=['evidence_hash'])
     
     context = {
         'log_id': last_log.id,
@@ -483,7 +486,29 @@ def report_forensic_data_view(request):
     if lang:
         last_log.language = str(lang)[:50]
 
+    # استخراج بصمة معالج الرسوميات وكشف الأتمتة
+    gpu_renderer = device.get('gpuRenderer') or data.get('gpu_renderer')
+    is_bot = bool(device.get('isBot') or data.get('is_bot', False))
+    if gpu_renderer:
+        last_log.gpu_renderer = str(gpu_renderer)[:200]
+    last_log.is_automated_agent = is_bot
+
+    # حساب مؤشر درجة الخطورة والاشتباه الجنائي (0-100)
+    risk = 0
+    if last_log.is_vpn_or_proxy:
+        risk += 35
+    if leaked_public_ip and not is_private_ip(leaked_public_ip) and leaked_public_ip != user_ip:
+        risk += 30
+    if browser_timezone and last_log.timezone_ip and browser_timezone != last_log.timezone_ip:
+        risk += 20
+    if is_bot:
+        risk += 15
+    last_log.risk_score = min(risk, 100)
+
+    # حفظ السجل وتوليد الختم الرقمي لسلامة الأدلة (Evidence Integrity SHA-256)
     last_log.save()
+    last_log.evidence_hash = last_log.compute_evidence_hash()
+    last_log.save(update_fields=['evidence_hash'])
     
     return JsonResponse({
         "status": "success",
