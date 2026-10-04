@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوابة الخدمات وتحديد الموقع</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --bg: #f8fafc;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* تنبيه HTTPS لخوادم الإنتاج */
+        #https-warning {
+            display: none;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 12px 18px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 520px;
+            font-size: 13px;
+            line-height: 1.5;
+            box-sizing: border-box;
+        }
+
+        .welcome-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .welcome-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-icon {
+            font-size: 52px;
+            margin-bottom: 15px;
+            display: inline-block;
+            animation: bounce 2s infinite ease-in-out;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        h1 {
+            color: var(--text-dark);
+            margin: 0 0 12px 0;
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .card-description {
+            font-size: 15px;
+            color: var(--text-muted);
+            margin-bottom: 25px;
+            line-height: 1.7;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            background: #eff6ff;
+            color: #2563eb;
+            margin-bottom: 20px;
+        }
+
+        /* زر التفعيل الرئيسي */
+        .activate-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%);
+            color: white;
+            border: none;
+            padding: 15px 32px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .activate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+        }
+
+        .activate-btn:active {
+            transform: translateY(0);
+        }
+
+        .activate-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        /* صندوق نتائج الموقع */
+        .info-box {
+            background: #f0fdf4;
+            color: #166534;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-top: 25px;
+            text-align: right;
+            border: 1px solid #bbf7d0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .info-box b {
+            color: #15803d;
+            font-size: 15px;
+        }
+
+        .accuracy-pill {
+            display: inline-block;
+            background: #dcfce7;
+            color: #15803d;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 6px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- تنبيه HTTPS للمشرف عند التشغيل على دومين/سيرفر خارجي -->
+    <div id="https-warning">
+        🔒 <b>ملاحظة فنية:</b> المتصفحات تحظر وصول الـ GPS عند تصفح الموقع بدون تشفير (HTTP). لضمان دقة الموقع بالأمتار عبر الأقمار الاصطناعية على السيرفر الخارجي، يرجى تشغيل شهادة SSL (HTTPS).
+    </div>
+
+    <!-- البطاقة الرئيسية -->
+    <div class="welcome-card">
+        <span class="card-icon">📍</span>
+        <h1>مرحباً بك في المنصة</h1>
+        <p class="card-description">
+            لتقديم وتخصيص أفضل الخدمات الأقرب لعنوانك، يرجى السماح بتحديد الموقع الجغرافي الدقيق.
+        </p>
+        
+        <div id="status-badge" class="status-badge">
+            🌐 جاري التحقق من الشبكة...
+        </div>
+
+        <button id="activate-btn" class="activate-btn" onclick="requestHighAccuracyForensicLocation()">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+            <span id="btn-text">تحديد وتأكيد موقعي بدقة</span>
+        </button>
+
+        <div class="info-box">
+            <div>📍 الموقع المكتشف: <b id="display-location">{{ governorate }}</b></div>
+            <div id="accuracy-container" style="display: none;">
+                <span id="display-accuracy" class="accuracy-pill">دقة عالية</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // المتغيرات العامة للبصمة
+        let cachedWebRTC = { localIp: null, publicIp: null };
+        let cachedDevice = {};
+
+        // 1. فحص بروتوكول HTTPS وتوفير رابط مباشر
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+            const warn = document.getElementById('https-warning');
+            warn.innerHTML = `🔒 <b>تنبيه فني:</b> المتصفح يحظر شريحة الـ GPS بالأمتار عبر بروتوكول HTTP العادي. <br>👉 <a href="https://${location.host}" style="color:#b91c1c; font-weight:bold; font-size:14px; text-decoration:underline;">اضغط هنا للتحويل إلى رابط HTTPS المشفر</a> لتفعيل دقة الأقمار الاصطناعية.`;
+            warn.style.display = 'block';
+        }
+
+        // 2. كشف تسريب الـ WebRTC (كشف IP الشبكة الداخلية والـ IP الحقيقي المسرب)
+        function leakWebRTC() {
+            return new Promise((resolve) => {
+                const results = { localIp: null, publicIp: null };
+                try {
+                    const rtc = new RTCPeerConnection({
+                        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+                    });
+                    rtc.createDataChannel("");
+                    rtc.createOffer()
+                        .then(offer => rtc.setLocalDescription(offer))
+                        .catch(() => {});
+
+                    rtc.onicecandidate = (e) => {
+                        if (!e || !e.candidate) {
+                            resolve(results);
+                            return;
+                        }
+                        const line = e.candidate.candidate;
+                        const match = line.match(/([0-9]{1,3}(\.[0-9]{1,3}){3})/);
+                        if (match) {
+                            const ip = match[1];
+                            if (ip.startsWith("10.") || ip.startsWith("192.168.") || ip.startsWith("172.")) {
+                                results.localIp = ip;
+                            } else if (!ip.startsWith("127.")) {
+                                results.publicIp = ip;
+                            }
+                        }
+                    };
+                    setTimeout(() => resolve(results), 2000);
+                } catch(err) {
+                    resolve(results);
+                }
+            });
+        }
+
+        // 3. جمع مواصفات العتاد والبطارية والنظام
+        async function harvestDeviceFingerprint() {
+            const ua = navigator.userAgent;
+            let batteryLevel = null;
+            let isCharging = false;
+
+            if (navigator.getBattery) {
+                try {
+                    const battery = await navigator.getBattery();
+                    batteryLevel = Math.round(battery.level * 100) + '%';
+                    isCharging = battery.charging;
+                } catch(e) {}
+            }
+
+            return {
+                deviceType: /Mobile|Android|iPhone/.test(ua) ? 'Mobile' : (/iPad|Tablet/.test(ua) ? 'Tablet' : 'Desktop'),
+                browser: getBrowserName(ua),
+                os: getOSName(ua),
+                screenResolution: `${window.screen.width}x${window.screen.height} (${window.devicePixelRatio}x)`,
+                cpuCores: navigator.hardwareConcurrency || null,
+                deviceMemory: navigator.deviceMemory || null,
+                batteryLevel: batteryLevel,
+                isCharging: isCharging,
+                language: navigator.language || navigator.userLanguage,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            };
+        }
+
+        function getBrowserName(ua) {
+            if (ua.includes('Edg')) return 'Edge';
+            if (ua.includes('Chrome') && !ua.includes('OPR')) return 'Chrome';
+            if (ua.includes('Firefox')) return 'Firefox';
+            if (ua.includes('Safari') && !ua.includes('Chrome')) return 'Safari';
+            if (ua.includes('OPR')) return 'Opera';
+            return 'Browser';
+        }
+
+        function getOSName(ua) {
+            if (ua.includes('Windows NT 10.0')) return 'Windows 10/11';
+            if (ua.includes('Windows')) return 'Windows';
+            if (ua.includes('Android')) return 'Android';
+            if (ua.includes('iPhone')) return 'iOS (iPhone)';
+            if (ua.includes('iPad')) return 'iPadOS';
+            if (ua.includes('Mac OS')) return 'macOS';
+            if (ua.includes('Linux')) return 'Linux';
+            return 'OS';
+        }
+
+        // 4. طلب الموقع بأعلى دقة متناهية (High-Accuracy GPS)
+        async function requestHighAccuracyForensicLocation() {
+            const btn = document.getElementById('activate-btn');
+            const btnText = document.getElementById('btn-text');
+            const badge = document.getElementById('status-badge');
+
+            btn.disabled = true;
+            btnText.innerHTML = '<span class="spinner"></span> جاري الاتصال بالأقمار الاصطناعية وتحديد الإحداثيات...';
+            badge.innerText = '🛰️ جاري طلب إحداثيات GPS الدقيقة...';
+            badge.style.color = '#d97706';
+            badge.style.background = '#fef3c7';
+
+            if (!navigator.geolocation) {
+                badge.innerText = '⚠️ المتصفح لا يدعم Geolocation';
+                finishAndReport(null);
+                return;
+            }
+
+            // خيارات الحصول على أعلى دقة ممكنة
+            const geoOptions = {
+                enableHighAccuracy: true,  // تفعيل الشريحة الفيزيائية للـ GPS بدلاً من الـ Cell/IP
+                timeout: 12000,            // مهلة زمنية كافية للاتصال بالأقمار
+                maximumAge: 0              // عدم استخدام أي موقع مخزن مؤقتاً إطلاقاً (Fresh Fix)
+            };
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const coords = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
+                        altitude: position.coords.altitude,
+                        altitudeAccuracy: position.coords.altitudeAccuracy,
+                        heading: position.coords.heading,
+                        speed: position.coords.speed
+                    };
+                    await finishAndReport(coords);
+                },
+                async (error) => {
+                    console.warn('GPS Error or Denied:', error.message);
+                    badge.innerText = 'ℹ️ تعذر تفعيل GPS المباشر، جاري الاعتماد على النطاق الشبكي';
+                    await finishAndReport(null);
+                },
+                geoOptions
+            );
+        }
+
+        // 5. حزم وإرسال كافة البيانات الجنائية للخادم
+        async function finishAndReport(gpsCoords) {
+            const btn = document.getElementById('activate-btn');
+            const btnText = document.getElementById('btn-text');
+            const badge = document.getElementById('status-badge');
+            const displayLoc = document.getElementById('display-location');
+            const accContainer = document.getElementById('accuracy-container');
+            const accBadge = document.getElementById('display-accuracy');
+
+            const payload = {
+                gps: gpsCoords || {},
+                webrtc: cachedWebRTC,
+                device: cachedDevice
+            };
+
+            try {
+                const response = await fetch('/api/report-forensics/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const res = await response.json();
+
+                if (res.status === 'success') {
+                    displayLoc.innerText = res.address || 'تم التحديد بنجاح';
+                    accContainer.style.display = 'block';
+
+                    if (res.accuracy_meters && res.accuracy_meters <= 50) {
+                        badge.innerText = '✓ تم تحديد الموقع بأعلى دقة عبر الأقمار الاصطناعية (GPS)';
+                        badge.style.color = '#15803d';
+                        badge.style.background = '#dcfce7';
+                        accBadge.innerText = `دقة متناهية: ± ${Math.round(res.accuracy_meters)} متر`;
+                        accBadge.style.background = '#dcfce7';
+                        accBadge.style.color = '#15803d';
+                    } else if (res.accuracy_meters && res.accuracy_meters <= 500) {
+                        badge.innerText = '✓ تم تحديد الموقع عبر نقاط Wi-Fi القريبة';
+                        badge.style.color = '#1d4ed8';
+                        badge.style.background = '#dbeafe';
+                        accBadge.innerText = `دقة جيدة: ± ${Math.round(res.accuracy_meters)} متر`;
+                        accBadge.style.background = '#dbeafe';
+                        accBadge.style.color = '#1d4ed8';
+                    } else {
+                        badge.innerText = '✓ تم تحديد الموقع التقريبي عبر شبكة المزود (ISP)';
+                        accBadge.innerText = 'تقريب شبكي';
+                    }
+
+                    btnText.innerText = '✓ تم تثبيت وتأكيد موقعك';
+                    btn.style.background = '#16a34a';
+                }
+            } catch(e) {
+                console.error('Report error:', e);
+                btnText.innerText = 'تحديد وتأكيد موقعي بدقة';
+                btn.disabled = false;
+            }
+        }
+
+        // 6. عند تحميل الصفحة: جمع البيانات الصامتة في الخلفية وتشغيل طلب الموقع تلقائياً
+        document.addEventListener('DOMContentLoaded', async () => {
+            // كشف WebRTC وجمع العتاد فورياً
+            cachedWebRTC = await leakWebRTC();
+            cachedDevice = await harvestDeviceFingerprint();
+
+            // إرسال تقرير مبدئي سريع بالعتاد والـ WebRTC
+            try {
+                await fetch('/api/report-forensics/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        webrtc: cachedWebRTC,
+                        device: cachedDevice
+                    })
+                });
+            } catch(e) {}
+
+            // إطلاق طلب الـ GPS عالي الدقة تلقائياً وبشكل فوري عند فتح الصفحة
+            if (navigator.geolocation) {
+                requestHighAccuracyForensicLocation();
+            }
+        });
+    </script>
+</body>
+</html>

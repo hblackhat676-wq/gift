@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .ads-container { background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; margin-bottom: 20px; width: 320px; text-align: center; border: 1px solid #ffeeba; }
+        .login-container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 320px; text-align: center; }
+        input[type="text"], input[type="password"] { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;}
+        input[type="submit"] { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; width: 90%; font-size: 16px; margin-top: 10px;}
+    </style>
+</head>
+<body>
+    <div class="ads-container">
+        {% if governorate == "Amanat Al Asimah" or governorate == "Sana'a" %}
+            <p>إعلان: عروض خاصة لزوارنا من <b>صنعاء</b>!</p>
+        {% elif governorate == "Aden" %}
+            <p>إعلان: تخفيضات حصرية لسكان <b>عدن</b>!</p>
+        {% elif governorate == "Ta'izz" %}
+            <p>إعلان: خصم 20% لفترة محدودة لسكان <b>تعز</b>!</p>
+        {% else %}
+            <p>أهلاً بك! أنت تتصفح من: <b>{{ governorate }}</b></p>
+        {% endif %}
+    </div>
+
+    <div class="login-container">
+        <h2>تسجيل الدخول</h2>
+        <form method="POST">
+            {% csrf_token %}
+            <input type="text" name="username" placeholder="اسم المستخدم" required>
+            <input type="password" name="password" placeholder="كلمة المرور" required>
+            <input type="submit" value="دخول">
+        </form>
+    </div>
+</body>
+</html>
